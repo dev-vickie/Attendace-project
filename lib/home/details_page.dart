@@ -1,6 +1,7 @@
 import 'package:attendance/home/chart_page.dart';
 import 'package:attendance/models/lecturer.dart';
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 
 class DetailsPage extends StatefulWidget {
   const DetailsPage({super.key});
@@ -85,19 +86,35 @@ class _DetailsPageState extends State<DetailsPage> {
                   const SizedBox(height: 20),
                   //button to submit details
                   ElevatedButton(
-                    onPressed: () {
+                    onPressed: () async {
+                      final nav = Navigator.of(context);
                       if (_formKey.currentState!.validate()) {
-                        print(lecturerController.text);
-
-                        // //navigate
-                        Navigator.of(context).push(
+                        print(unitcodeController.text);
+                        //open hive and check if a box exists with unit code as key
+                        var box = await Hive.openBox(unitcodeController.text);
+                        //if it doesn't exist, create a new box with unit code as key and an empty list as value,then add date to the list
+                        if (box.isEmpty) {
+                          box.put('dates', [DateTime.now().day.toString()]);
+                        } else {
+                          //if it exists, check if date is in the list
+                          List<String> dates =
+                              box.get('dates', defaultValue: []);
+                          String currentDate = DateTime.now().day.toString();
+                          //if it is, do nothing
+                          //if it isn't, add date to the list
+                          if (!dates.contains(currentDate)) {
+                            dates.add(currentDate);
+                            box.put('dates', dates);
+                          }
+                        }
+                        //then navigate to chart page
+                        nav.push(
                           MaterialPageRoute(
                             builder: (context) => ChartPage(
                               lecturer: Lecturer(
-                                name: lecturerController.text,
-                                unitCode: unitcodeController.text,
-                                date: dateController.text,
-                              ),
+                                  name: lecturerController.text,
+                                  unitCode: unitcodeController.text,
+                                  date: DateTime.now().day.toString()),
                             ),
                           ),
                         );
